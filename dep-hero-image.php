@@ -12,159 +12,15 @@
  * @package         Customizeable_Pages
  */
 
-// Callback function to insert 'styleselect' into the $buttons array
-function my_mce_buttons_2( $buttons ) {
-    array_unshift( $buttons, 'styleselect' );
-    return $buttons;
-}
-// Register our callback to the appropriate filter
-add_filter( 'mce_buttons_2', 'my_mce_buttons_2' );
 
-// Callback function to filter the MCE settings
-function my_mce_before_init_insert_formats( $init_array ) {
-    // Define the style_formats array
-    $style_formats = array(
-        // Each array child is a format with it's own settings
-        array(
-            'title' => 'Call To Action Button',
-            'inline' => 'span',
-            'classes' => 'call-to-action',
-            'wrapper' => true,
+function dep_hero_image_html($post) {
 
-        )
-    );
-    // Insert the array, JSON ENCODED, into 'style_formats'
-    $init_array['style_formats'] = json_encode( $style_formats );
+    $dir = plugin_dir_path( __FILE__ );
 
-    return $init_array;
+    include $dir."/views/admin.php";
 
 }
-// Attach callback to 'tiny_mce_before_init'
-add_filter( 'tiny_mce_before_init', 'my_mce_before_init_insert_formats' );
 
-function dep_hero_image_html($post)
-{
-
-    global $post;
-    $values = get_post_custom( $post->ID );
-    $image_url = isset( $values['dep_hero_image_url'] ) ? $values['dep_hero_image_url'][ 0 ] : '';
-    $content = isset( $values['dep_hero_image_content'] ) ? $values['dep_hero_image_content'][ 0 ] : '';
-
-    $editor_settings = array(
-        // "tiny_mce" => '{ oninit : function() { alert(); } '
-    );
-
-    ?>
-    <p class="hide-if-no-js">
-        <a class="upload-custom-img <?php if ( $you_have_img  ) { echo 'hidden'; } ?>"
-           href="<?php echo $upload_link ?>">
-            <?php _e('Set background image') ?>
-        </a>
-        <a class="delete-custom-img <?php if ( ! $you_have_img  ) { echo 'hidden'; } ?>"
-           href="#">
-            <?php _e('Remove background image') ?>
-        </a>
-    </p>
-    <input type="hidden" name="dep_hero_image_url" id="dep_hero_image_url" value="<?php echo $image_url; ?>" >
-
-    <?php wp_editor( $content, "dep_hero_image_content" , $editor_settings ); ?>
-
-    <script>
-
-        jQuery(function($){
-
-            tinymce.on('addeditor', function( event ) {
-
-             var editor = tinyMCE.get('dep_hero_image_content');
-
-             editor.on( "init" , function() {
-                 editor.getBody().style.backgroundImage = "url(<?php echo $image_url; ?>)";
-             });
-
-            }, true );
-
-            // Set all variables to be used in scope
-            var frame,
-                metaBox = $('#dep_hero_image.postbox'), // Your meta box id here
-                addImgLink = metaBox.find('.upload-custom-img'),
-                delImgLink = metaBox.find( '.delete-custom-img'),
-                imgContainer = metaBox.find( '.custom-img-container'),
-                imgIdInput = metaBox.find( '#dep_hero_image_url' );
-
-            // ADD IMAGE LINK
-            addImgLink.on( 'click', function( event ){
-
-                event.preventDefault();
-
-                // If the media frame already exists, reopen it.
-                if ( frame ) {
-                    frame.open();
-                    return;
-                }
-
-                // Create a new media frame
-                frame = wp.media({
-                    title: 'Select or Upload Media Of Your Chosen Persuasion',
-                    button: {
-                        text: 'Use this media'
-                    },
-                    multiple: false  // Set to true to allow multiple files to be selected
-                });
-
-
-                // When an image is selected in the media frame...
-                frame.on( 'select', function() {
-
-                    // Get media attachment details from the frame state
-                    var attachment = frame.state().get('selection').first().toJSON();
-
-                    // Send the attachment URL to our custom image input field.
-                    //imgContainer.append( '<img src="'+attachment.url+'" alt="" style="max-width:100%;"/>' );
-
-                    // Send the attachment id to our hidden input
-                    imgIdInput.val( attachment.url );
-
-                    var editor = tinyMCE.get('dep_hero_image_content');
-
-                    editor.getBody().style.backgroundImage = "url("+attachment.url+")";
-
-                    // Hide the add image link
-                    addImgLink.addClass( 'hidden' );
-
-                    // Unhide the remove image link
-                    delImgLink.removeClass( 'hidden' );
-                });
-
-                // Finally, open the modal on click
-                frame.open();
-            });
-
-
-            // DELETE IMAGE LINK
-            delImgLink.on( 'click', function( event ){
-
-                event.preventDefault();
-
-                // Clear out the preview image
-                imgContainer.html( '' );
-
-                // Un-hide the add image link
-                addImgLink.removeClass( 'hidden' );
-
-                // Hide the delete image link
-                delImgLink.addClass( 'hidden' );
-
-                // Delete the image id from the hidden input
-                imgIdInput.val( '' );
-
-            });
-
-        });
-
-    </script>
-
-    <?php
-}
 
 function add_custom_box()
 {
@@ -229,11 +85,15 @@ function dep_hero_image_save_postdata($post_id)
 
 add_action('save_post', 'dep_hero_image_save_postdata');
 
-// Move all "advanced" metaboxes above the default editor
-add_action('edit_form_after_title', function() {
+function dep_hero_image_move_metaboxes()
+{
+
+    // Move all "advanced" metaboxes above the default editor
 
     global $post, $wp_meta_boxes;
     do_meta_boxes(get_current_screen(), 'advanced', $post);
     unset($wp_meta_boxes[get_post_type($post)]['advanced']);
 
-});
+}
+
+add_action('edit_form_after_title', 'dep_hero_image_move_metaboxes' );
